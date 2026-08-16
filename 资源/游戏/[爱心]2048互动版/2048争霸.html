@@ -1,0 +1,1116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>2048 争霸</title>
+<style>
+:root{
+  --bg:#0b0e1a; --panel:#141a30; --panel2:#1b2342; --line:rgba(255,255,255,.09);
+  --txt:#e9edf9; --sub:#8b93b8; --accent:#22d3ee; --accent2:#a78bfa;
+  --gold:#fbbf24; --danger:#f87171; --ok:#34d399;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;padding:0;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#app{position:fixed;inset:0;overflow:hidden}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;
+  padding:var(--ai-phone-game-safe-top,84px) 12px var(--ai-phone-game-safe-bottom,18px)}
+.screen.active{display:flex}
+
+/* ---------- 通用 ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid var(--line);background:var(--panel2);color:var(--txt);
+  border-radius:14px;padding:10px 16px;font-size:14px;cursor:pointer;transition:.15s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:linear-gradient(135deg,#0891b2,#7c3aed);border:none;font-weight:700;color:#fff;box-shadow:0 6px 18px rgba(124,58,237,.35)}
+.btn.primary.big{width:100%;padding:15px;font-size:17px;border-radius:16px}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--danger);border-color:rgba(248,113,113,.35)}
+.sub{color:var(--sub);font-size:12px;margin:4px 0}
+
+/* ---------- 菜单 ---------- */
+#screen-menu{justify-content:flex-start}
+.menu-inner{display:flex;flex-direction:column;gap:14px;max-width:420px;width:100%;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:6vh}
+.logo-tile{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#fbbf24,#f59e0b);
+  display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#7c2d12;
+  box-shadow:0 10px 24px rgba(251,191,36,.4);transform:rotate(-4deg)}
+.logo h1{margin:0;font-size:34px;letter-spacing:2px;background:linear-gradient(90deg,#22d3ee,#a78bfa,#fbbf24);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.menu-sub{text-align:center;color:var(--sub);font-size:13px;margin:0}
+.hall{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:120px}
+.hall-title{font-size:13px;color:var(--gold);font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.hall-list{display:flex;flex-direction:column;gap:8px}
+.hall-empty{color:var(--sub);font-size:12px;text-align:center;padding:14px 0}
+.hall-row{display:flex;align-items:center;gap:10px;font-size:13px}
+.hall-row .rank{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;background:var(--panel2);color:var(--sub);flex:none}
+.hall-row .rank.r1{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#7c2d12}
+.hall-row .rank.r2{background:#cbd5e1;color:#334155}
+.hall-row .rank.r3{background:#d97706;color:#fff7ed}
+.hall-row .hname{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hall-row .hscore{color:var(--accent);font-weight:800;font-variant-numeric:tabular-nums}
+.hall-row .htag{font-size:10px;color:var(--sub);background:var(--panel2);padding:2px 7px;border-radius:99px}
+.hint{text-align:center;color:var(--sub);font-size:11px;line-height:1.6}
+/* ---------- 配置 ---------- */
+#screen-setup{overflow-y:auto}
+.setup{max-width:420px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding-bottom:10px}
+.setup-head{display:flex;align-items:center;gap:10px}
+.setup-head h2{margin:0;font-size:17px;flex:1}
+.opt-row{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.opt-label{font-size:12px;color:var(--sub);display:block;margin-bottom:8px}
+.seg{display:flex;gap:6px}
+.seg-btn{flex:1;border:1px solid var(--line);background:var(--panel2);color:var(--sub);
+  border-radius:10px;padding:9px 4px;font-size:12px;cursor:pointer;transition:.15s;line-height:1.3}
+.seg-btn.active{background:linear-gradient(135deg,rgba(8,145,178,.35),rgba(124,58,237,.35));
+  color:var(--txt);border-color:rgba(34,211,238,.5);font-weight:600}
+.seats{display:flex;flex-direction:column;gap:8px}
+.seat-card{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:10px 12px;cursor:pointer;transition:.15s}
+.seat-card:active{transform:scale(.98)}
+.seat-num{width:26px;height:26px;border-radius:8px;background:var(--panel2);color:var(--sub);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex:none}
+.seat-info{flex:1;min-width:0}
+.seat-name{font-size:14px;font-weight:700;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat-type{font-size:11px;color:var(--sub)}
+.seat-avatar{width:34px;height:34px;border-radius:50%;background:var(--panel2);flex:none;object-fit:cover;
+  border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:16px;overflow:hidden}
+.seat-arrow{color:var(--sub);font-size:16px}
+.seat-card[data-kind="human"]{border-color:rgba(52,211,153,.4)}
+.seat-card[data-kind="char"]{border-color:rgba(167,139,250,.45)}
+.seat-card[data-kind="bot"]{border-color:rgba(34,211,238,.35)}
+
+/* ---------- 角色选择弹层 ---------- */
+.mask{position:fixed;inset:0;background:rgba(5,8,18,.72);backdrop-filter:blur(4px);
+  display:none;align-items:flex-end;justify-content:center;z-index:50}
+.mask.active{display:flex}
+.sheet{width:100%;max-width:440px;max-height:70vh;background:var(--panel);border:1px solid var(--line);
+  border-radius:20px 20px 0 0;padding:16px 16px calc(var(--ai-phone-game-safe-bottom,18px) + 12px);
+  display:flex;flex-direction:column;gap:10px}
+.sheet h3{margin:0;font-size:16px;text-align:center}
+.char-list{overflow-y:auto;display:flex;flex-direction:column;gap:8px;flex:1}
+.char-item{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:12px;padding:9px 12px;cursor:pointer}
+.char-item:active{transform:scale(.98)}
+.char-item img,.char-item .no-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;background:#232b4a}
+.char-item .no-avatar{display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--sub)}
+.char-item .cname{font-size:14px;font-weight:700}
+.char-item .csub{font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.char-empty{color:var(--sub);text-align:center;font-size:12px;padding:20px 0;line-height:1.7}
+
+/* ---------- 对战（同时比拼） ---------- */
+#screen-game{padding-left:8px;padding-right:8px}
+.battle{display:flex;flex-direction:column;gap:7px;height:100%;max-width:460px;margin:0 auto;width:100%}
+.topbar{display:flex;align-items:center;justify-content:space-between;flex:none}
+.mode-label{font-size:11px;color:var(--accent2);font-weight:700}
+.top-right{display:flex;align-items:center;gap:8px}
+.time-left{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums;font-weight:700}
+.ctl-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;border:none;transition:.15s;flex:none;line-height:1}
+.ctl-btn:active{transform:scale(.9)}
+.ctl-pause{background:#fff;color:#1f2937;box-shadow:0 2px 8px rgba(255,255,255,.25)}
+.ctl-end{background:#ef4444;color:#fff;box-shadow:0 2px 8px rgba(239,68,68,.45)}
+.score-strip{display:flex;gap:6px;overflow-x:auto;flex:none;scrollbar-width:none}
+.score-strip::-webkit-scrollbar{display:none}
+.chip{display:flex;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:4px 8px;font-size:11px;min-width:0;flex:none}
+.chip .c-av{width:18px;height:18px;border-radius:50%;object-fit:cover;background:#232b4a;flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:10px;overflow:hidden}
+.chip .c-name{max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.chip .c-score{color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums}
+.chip .c-max{color:var(--sub);font-size:9px}
+.chip.lead{border-color:var(--gold);box-shadow:0 0 8px rgba(251,191,36,.35)}
+.chip.dead{opacity:.42;filter:grayscale(.7)}
+.chat{flex:none;height:46px;overflow-y:auto;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:4px 9px;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin}
+.msg{font-size:11px;line-height:1.4;color:var(--txt)}
+.msg b{color:var(--accent)}
+.msg .emo{color:var(--gold)}
+.msg.event{color:var(--sub);text-align:center}
+.comment{flex:none;display:flex;flex-direction:column;gap:5px}
+.quick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.quick::-webkit-scrollbar{display:none}
+.q-chip{flex:none;border:1px solid var(--line);background:var(--panel2);color:var(--sub);
+  border-radius:99px;padding:5px 12px;font-size:11px;cursor:pointer;transition:.12s;white-space:nowrap}
+.q-chip:active{background:rgba(34,211,238,.25);color:var(--txt);transform:scale(.95)}
+.cmt-row{display:flex;gap:6px}
+.cmt-row input{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+  border-radius:12px;padding:8px 12px;font-size:12px;outline:none}
+.cmt-row input:focus{border-color:rgba(34,211,238,.6)}
+.cmt-row button{flex:none;border:none;background:linear-gradient(135deg,#0891b2,#7c3aed);color:#fff;
+  border-radius:12px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.cmt-row button:active{transform:scale(.95)}
+.pause-overlay{position:absolute;inset:0;z-index:40;background:rgba(5,8,18,.62);backdrop-filter:blur(3px);
+  display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pause-box{text-align:center;color:var(--txt);font-size:18px;font-weight:800;display:flex;flex-direction:column;
+  gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px 34px}
+.pause-icon{font-size:46px}
+.pause-sub{color:var(--sub);font-size:12px;font-weight:600}
+.confirm-sheet{max-width:320px;width:calc(100% - 40px);border-radius:18px;align-items:center;text-align:center;gap:12px}
+.confirm-msg{color:var(--sub);font-size:13px;margin:0;line-height:1.6}
+.confirm-btns{display:flex;gap:10px;width:100%}
+.confirm-btns .btn{flex:1}
+.btn.solid-danger{background:#ef4444;border:none;color:#fff;font-weight:700}
+.arena{flex:1;min-height:0;display:flex;gap:8px;align-items:stretch;justify-content:center}
+.arena.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;
+  align-content:center;max-width:440px;width:100%;margin:0 auto}
+.main-col{flex:1;min-width:0;max-width:340px;display:flex;flex-direction:column;gap:5px;margin:auto 0}
+.mini-col{width:114px;flex:none;display:flex;flex-direction:column;gap:8px;justify-content:center}
+.board-card{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:6px;min-height:0;position:relative}
+.board-card.main{flex:1;min-height:0}
+.board-card.mini{padding:4px}
+.board-card.dead{opacity:.45;filter:grayscale(.7)}
+.b-head{display:flex;align-items:center;gap:5px;min-width:0;flex:none}
+.b-av{width:20px;height:20px;border-radius:50%;object-fit:cover;background:#232b4a;flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:10px;overflow:hidden}
+.b-name{font-size:11px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b-score{font-size:11px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums;flex:none}
+.b-score small{color:var(--sub);font-weight:600;font-size:9px;margin-right:1px}
+.b-dead{position:absolute;inset:0;background:rgba(11,14,26,.55);border-radius:12px;display:flex;
+  align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--danger);
+  z-index:3;letter-spacing:2px;pointer-events:none}
+.board{position:relative;flex:1;min-height:0;width:100%;aspect-ratio:1/1;margin:auto;
+  background-color:rgba(255,255,255,.045);
+  background-image:
+    linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
+  background-size:25% 25%;
+  border-radius:10px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.board.mini{flex:none}
+.tile{position:absolute;left:0;top:0;width:25%;height:25%;padding:3px;
+  transition:left .13s cubic-bezier(.25,.8,.4,1), top .13s cubic-bezier(.25,.8,.4,1);
+  will-change:left,top;display:flex;align-items:center;justify-content:center}
+.tile-inner{width:100%;height:100%;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-variant-numeric:tabular-nums;line-height:1;transition:box-shadow .2s}
+.tile .tile-inner{--glow:rgba(240,200,120,.5)}
+/* 米白 → 浅黄 → 浅橙 → 浅绿 → 浅蓝 → 浅紫，按 2^n 循环（类加在内层 tile-inner 上） */
+.tile .tile-inner.tc0{background:linear-gradient(145deg,#f8f4ec,#ece1ce);color:#6b5a45;--glow:rgba(214,190,150,.55)}
+.tile .tile-inner.tc1{background:linear-gradient(145deg,#fbeeb0,#f4dc82);color:#7a5f16;--glow:rgba(244,214,90,.6)}
+.tile .tile-inner.tc2{background:linear-gradient(145deg,#ffd3a4,#f8ae6d);color:#8a4212;--glow:rgba(248,162,95,.6)}
+.tile .tile-inner.tc3{background:linear-gradient(145deg,#ccf2c6,#a6e0a2);color:#2e6d2a;--glow:rgba(140,220,130,.6)}
+.tile .tile-inner.tc4{background:linear-gradient(145deg,#cce8fb,#a8d2f4);color:#1e507c;--glow:rgba(120,190,240,.6)}
+.tile .tile-inner.tc5{background:linear-gradient(145deg,#e6d9f8,#ccb5ef);color:#5a3a8e;--glow:rgba(180,140,235,.6)}
+.tile .tile-inner.hot{animation:glowPulse 1.5s infinite}
+@keyframes glowPulse{0%,100%{box-shadow:0 0 10px var(--glow)}
+  50%{box-shadow:0 0 28px var(--glow)}}
+.tile.merged .tile-inner{animation:mergePop .22s ease-out}
+@keyframes mergePop{0%{transform:scale(.78)}55%{transform:scale(1.22)}100%{transform:scale(1)}}
+.tile.new .tile-inner{animation:appear .16s ease-out}
+@keyframes appear{0%{transform:scale(0);opacity:0}75%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
+
+/* ---------- 结算 ---------- */
+#screen-result{justify-content:center;align-items:center}
+#fx{position:absolute;inset:0;pointer-events:none;z-index:1}
+.result{position:relative;z-index:2;width:100%;max-width:400px;background:var(--panel);
+  border:1px solid var(--line);border-radius:22px;padding:20px 18px;display:flex;flex-direction:column;
+  gap:9px;align-items:center;text-align:center;animation:rise .4s ease-out}
+@keyframes rise{0%{transform:translateY(30px);opacity:0}100%{transform:translateY(0);opacity:1}}
+.crown{font-size:50px;animation:bounce 1s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-8px) scale(1.08)}}
+.r-title{font-size:14px;color:var(--sub);margin:0;letter-spacing:4px}
+.r-name{font-size:28px;font-weight:900;margin:0;background:linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.r-tag{font-size:12px;font-weight:700;color:#7c2d12;background:linear-gradient(135deg,#fbbf24,#f59e0b);
+  border-radius:99px;padding:3px 12px}
+.r-score{font-size:14px;color:var(--accent);font-weight:800}
+.r-ranks{width:100%;display:flex;flex-direction:column;gap:5px;max-height:110px;overflow-y:auto}
+.rank-line{display:flex;align-items:center;gap:8px;font-size:12px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:10px;padding:6px 10px;text-align:left}
+.rank-line .rk{width:20px;height:20px;border-radius:50%;background:var(--panel2);color:var(--sub);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex:none}
+.rank-line.champ{background:linear-gradient(135deg,rgba(251,191,36,.16),rgba(245,158,11,.08));
+  border-color:rgba(251,191,36,.5)}
+.rank-line.champ .rk{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#7c2d12}
+.rank-line .rn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-line .rc{color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums}
+.rank-line .rm{color:var(--sub);font-size:10px}
+.r-speech{font-size:13px;color:var(--txt);line-height:1.6;background:var(--panel2);border:1px solid var(--line);
+  border-radius:12px;padding:9px 12px;width:100%}
+.r-loses{width:100%;display:flex;flex-direction:column;gap:5px;max-height:90px;overflow-y:auto}
+.lose-line{font-size:12px;color:var(--sub);background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);
+  border-radius:10px;padding:6px 10px;text-align:left;line-height:1.5}
+.r-actions{display:flex;gap:10px;width:100%;margin-top:4px}
+.r-actions .btn{flex:1}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ========== 主菜单 ========== -->
+  <section id="screen-menu" class="screen active">
+    <div class="menu-inner">
+      <div class="logo"><div class="logo-tile">2048</div><h1>争霸</h1></div>
+      <p class="menu-sub">同屏各玩各的 · 真人 / AI 混战 · 纯观战吃瓜</p>
+      <div class="hall">
+        <div class="hall-title">🏆 名人堂 · 历史最高记录在册</div>
+        <div id="hall-list" class="hall-list"><div class="hall-empty">暂无记录，等你来封王</div></div>
+      </div>
+      <button id="btn-start" class="btn primary big">⚔️ 开始对战</button>
+      <p class="hint">最多 4 人同时比拼 · 棋盘堵死即出局，全打完比总分<br>全员 AI 上场 = 纯观战模式，看他们互撕</p>
+    </div>
+  </section>
+
+  <!-- ========== 对战设置 ========== -->
+  <section id="screen-setup" class="screen">
+    <div class="setup">
+      <div class="setup-head">
+        <button id="btn-back-menu" class="btn ghost">‹ 返回</button>
+        <h2>对战设置</h2>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">赛制</span>
+        <div class="seg" id="mode-seg">
+          <button class="seg-btn active" data-mode="race">竞速赛<br>先合出 2048 者胜</button>
+          <button class="seg-btn" data-mode="time">限时赛<br>3 分钟分高者胜</button>
+        </div>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">AI 走子速度</span>
+        <div class="seg" id="speed-seg">
+          <button class="seg-btn" data-speed="1500">疾风<br>1.5 秒/步</button>
+          <button class="seg-btn active" data-speed="3000">标准<br>3 秒/步</button>
+          <button class="seg-btn" data-speed="5000">沉稳<br>5 秒/步</button>
+          <button class="seg-btn" data-speed="10000">慢镜<br>10 秒/步</button>
+        </div>
+      </div>
+      <div class="opt-row">
+        <span class="opt-label">热闹程度</span>
+        <div class="seg" id="talk-seg">
+          <button class="seg-btn active" data-talk="1">话痨模式<br>AI 会放话 / 庆祝 / 记仇</button>
+          <button class="seg-btn" data-talk="0">安静模式<br>只玩不闹</button>
+        </div>
+      </div>
+      <span class="opt-label" style="margin:2px 4px 0">出场选手（点选手卡片循环切换：我 → AI 角色 → 机器人 → 空位）</span>
+      <div class="seats" id="seats"></div>
+      <button id="btn-go" class="btn primary big">🔥 开战！</button>
+    </div>
+  </section>
+
+  <!-- ========== 角色选择弹层 ========== -->
+  <div id="char-mask" class="mask">
+    <div class="sheet">
+      <h3>选择上桌的 AI 角色</h3>
+      <div id="char-list" class="char-list"></div>
+      <button id="char-cancel" class="btn ghost">取消</button>
+    </div>
+  </div>
+
+  <!-- ========== 对战 ========== -->
+  <section id="screen-game" class="screen">
+    <div class="battle">
+      <div class="topbar">
+        <span class="mode-label" id="mode-label">竞速赛</span>
+        <div class="top-right">
+          <span class="time-left" id="time-left"></span>
+          <button id="btn-pause" class="ctl-btn ctl-pause" title="暂停/继续">⏸</button>
+          <button id="btn-end" class="ctl-btn ctl-end" title="结束比赛">⏹</button>
+        </div>
+      </div>
+      <div class="score-strip" id="score-strip"></div>
+      <div class="chat" id="chat"></div>
+      <div class="arena" id="arena"></div>
+      <div class="comment" id="comment">
+        <div class="quick" id="quick"></div>
+        <div class="cmt-row">
+          <input id="cmt-input" maxlength="30" placeholder="发条评论，全场 AI 都能看见…" autocomplete="off">
+          <button id="cmt-send">发送</button>
+        </div>
+      </div>
+      <div id="pause-overlay" class="pause-overlay" style="display:none">
+        <div class="pause-box"><div class="pause-icon">⏸</div><div>中场休息</div><div class="pause-sub">点击任意处继续</div></div>
+      </div>
+    </div>
+  </section>
+<!-- ========== 结算 ========== -->
+  <section id="screen-result" class="screen">
+    <canvas id="fx"></canvas>
+    <div class="result" id="result-card">
+      <div class="crown">👑</div>
+      <p class="r-title">CHAMPION</p>
+      <h2 class="r-name" id="r-name">--</h2>
+      <span class="r-tag" id="r-tag">称号</span>
+      <div class="r-score" id="r-score"></div>
+      <div class="r-ranks" id="r-ranks"></div>
+      <div class="r-speech" id="r-speech"></div>
+      <div class="r-loses" id="r-loses"></div>
+      <div class="r-actions">
+        <button id="btn-again" class="btn primary">⚔️ 再战一局</button>
+        <button id="btn-home" class="btn ghost">🏠 主菜单</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 确认弹窗 ========== -->
+  <div id="confirm-mask" class="mask">
+    <div class="sheet confirm-sheet">
+      <h3 id="confirm-title">确认</h3>
+      <p id="confirm-msg" class="confirm-msg"></p>
+      <div class="confirm-btns">
+        <button id="confirm-cancel" class="btn ghost">取消</button>
+        <button id="confirm-ok" class="btn primary">确定</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>"use strict";
+/* ================= 宿主与环境 ================= */
+const hasHost = (typeof window.AiPhoneGame !== "undefined" && window.AiPhoneGame);
+let playerName = "我";
+try{
+  if(hasHost && hasHost.getPlayerProfile){
+    hasHost.getPlayerProfile().then(p=>{ if(p && p.name) playerName=p.name; }).catch(()=>{});
+  }
+}catch(e){}
+
+/* ================= 工具 ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const DIR_ARROW = {ArrowUp:0,ArrowRight:1,ArrowDown:2,ArrowLeft:3,w:0,d:1,s:2,a:3,W:0,D:1,S:2,A:3};
+/* ================= 2048 核心 ================= */
+const SIZE = 4;
+function emptyBoard(){ return Array.from({length:SIZE},()=>Array(SIZE).fill(0)); }
+let idSeq=1;
+function emptyIdGrid(){ return Array.from({length:SIZE},()=>Array(SIZE).fill(0)); }
+function addRandom(b, idg){
+  const cells=[];
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++) if(!b[r][c]) cells.push([r,c]);
+  if(!cells.length) return null;
+  const [r,c]=cells[Math.floor(Math.random()*cells.length)];
+  b[r][c]=Math.random()<0.9?2:4;
+  if(idg) idg[r][c]=idSeq++;
+  return {r,c};
+}
+function slideRow(arr){
+  const v=arr.filter(x=>x); const out=[]; let gain=0;
+  for(let i=0;i<v.length;i++){
+    if(i+1<v.length && v[i]===v[i+1]){ out.push(v[i]*2); gain+=v[i]*2; i++; }
+    else out.push(v[i]);
+  }
+  while(out.length<SIZE) out.push(0);
+  return {row:out, gain};
+}
+/* dir: 0=上 1=右 2=下 3=左 */
+function moveBoard(b, dir){
+  const nb=emptyBoard(); let gain=0;
+  for(let i=0;i<SIZE;i++){
+    let row;
+    if(dir===1||dir===3){
+      const src = dir===1 ? b[i].slice().reverse() : b[i].slice();
+      const r = slideRow(src);
+      row = dir===1 ? r.row.slice().reverse() : r.row;
+      gain += r.gain;
+      nb[i]=row;
+    }else{
+      const col=[];
+      for(let j=0;j<SIZE;j++) col.push(dir===0 ? b[j][i] : b[SIZE-1-j][i]);
+      const r=slideRow(col);
+      const outCol = dir===0 ? r.row : r.row.slice().reverse();
+      for(let j=0;j<SIZE;j++) nb[j][i]=outCol[j];
+      gain += r.gain;
+    }
+  }
+  let moved=false;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++) if(b[r][c]!==nb[r][c]) moved=true;
+  return {board:nb, gain, moved};
+}
+/* 带轨迹的移动（用于滑动/合并动画）：追踪每个格子的去向 */
+function slideLineWithTrace(cells){
+  const out=[]; let pending=null;
+  for(const c of cells){
+    if(!c.v) continue;
+    if(pending && pending.v===c.v){
+      pending.v*=2; pending.merged=true; pending.from.push(c.id);
+      out.push(pending);
+      pending=null;
+    }else{
+      if(pending) out.push(pending);
+      pending={v:c.v, id:c.id, from:[c.id], merged:false};
+    }
+  }
+  if(pending) out.push(pending);
+  return out;
+}
+function moveBoardTraced(b, idg, dir){
+  const nb=emptyBoard(), nig=emptyIdGrid();
+  const moves=[]; let gain=0;
+  const lineCell=(i,j)=>(
+    {r: dir===3?i:(dir===1?i:(dir===0?j:(SIZE-1-j))),
+     c: dir===3?j:(dir===1?(SIZE-1-j):(dir===0?i:i))}
+  );
+  for(let i=0;i<SIZE;i++){
+    const cells=[];
+    for(let j=0;j<SIZE;j++){
+      const p=lineCell(i,j);
+      cells.push({v:b[p.r][p.c], id:idg[p.r][p.c]});
+    }
+    const line=slideLineWithTrace(cells);
+    for(let j=0;j<SIZE;j++){
+      const item=line[j];
+      if(!item) continue;
+      const p=lineCell(i,j);
+      nb[p.r][p.c]=item.v; nig[p.r][p.c]=item.id;
+      gain += item.merged? item.v : 0;
+      moves.push({r:p.r, c:p.c, id:item.id, value:item.v, merged:item.merged});
+    }
+  }
+  let moved=false;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++) if(b[r][c]!==nb[r][c]) moved=true;
+  return {board:nb, idGrid:nig, gain, moved, moves};
+}
+function canMoveBoard(b){
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(!b[r][c]) return true;
+    if(c+1<SIZE && b[r][c]===b[r][c+1]) return true;
+    if(r+1<SIZE && b[r][c]===b[r+1][c]) return true;
+  }
+  return false;
+}
+function maxTile(b){ let m=0; for(const row of b) for(const v of row) if(v>m) m=v; return m; }
+function tileClass(v){
+  if(!v) return "t0";
+  /* 2→米白 4→浅黄 8→浅橙 16→浅绿 32→浅蓝 64→浅紫 128→米白…按 2^n 循环 */
+  const exp=Math.round(Math.log2(v));
+  return "tc"+(((exp-1)%6)+6)%6;
+}
+/* ================= AI 走子（启发式，稳） ================= */
+function scoreBoard(b){
+  let s=0, empty=0;
+  for(const row of b) for(const v of row) if(!v) empty++;
+  s += empty*70;
+  let mono=0;
+  for(let r=0;r<SIZE;r++) for(let c=0;c<SIZE-1;c++)
+    mono -= Math.abs(Math.log2(b[r][c]||1)-Math.log2(b[r][c+1]||1))*0.9;
+  for(let c=0;c<SIZE;c++) for(let r=0;r<SIZE-1;r++)
+    mono -= Math.abs(Math.log2(b[r][c]||1)-Math.log2(b[r+1][c]||1))*0.9;
+  s += mono;
+  const m=maxTile(b);
+  for(const [r,c] of [[0,0],[0,3],[3,0],[3,3]]) if(b[r][c]===m) s += m*0.6;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(c+1<SIZE && b[r][c] && b[r][c]===b[r][c+1]) s += b[r][c]*1.6;
+    if(r+1<SIZE && b[r][c] && b[r][c]===b[r+1][c]) s += b[r][c]*1.6;
+  }
+  return s;
+}
+/* noise: 0=最优 1=非常冲动（不同 AI 性格） */
+function aiChoose(b, noise){
+  let best=-Infinity; const dirs=[];
+  for(let d=0;d<4;d++){
+    const res=moveBoard(b,d);
+    if(!res.moved) continue;
+    let s=scoreBoard(res.board)+res.gain*0.5+(Math.random()*2-1)*noise*55;
+    if(s>best+1e-6){ best=s; dirs.length=0; dirs.push(d); }
+    else if(Math.abs(s-best)<1e-6) dirs.push(d);
+  }
+  return dirs.length? dirs[Math.floor(Math.random()*dirs.length)] : -1;
+}
+/* ================= 常量与状态 ================= */
+const BOT_NAMES = ["阿呆","阿瓜","小机灵","憨憨","急急国王","淡定哥","摸鱼怪","卷王"];
+const TAGS_TOP = ["数字之王","方块霸主","2048疯批","合并大师","棋盘掌控者"];
+const TAGS_MID = ["手感火热","稳如老狗","有点东西","不甘人后"];
+const TAGS_LOW = ["重在参与","下次一定","围观群众","新手上路"];
+
+let seats=[];            // 座位配置（含对局状态）
+let mode="race";         // race | time
+let talkMode=true;
+let aiInterval=3000;     // AI 走子间隔 ms
+let timeTotal=180, timeLeft=180;
+let gameOver=false, winner=null, gamePaused=false, confirmCb=null;
+let aiTimers={};         // seatIdx -> timeout
+let gameClock=null;
+let pickSeat=-1;
+let characters=[];
+let charPkgs={};
+let hall=[];
+
+const SEAT_COLORS=["#34d399","#a78bfa","#fbbf24","#f87171"];
+const SEAT_EMOJI=["🙋","🤖","🤖","🤖"];
+/* ================= 名人堂 ================= */
+function saveHall(){
+  const data={hall:hall.slice(0,12)};
+  try{ if(hasHost && hasHost.saveGame) hasHost.saveGame(data); }catch(e){}
+  try{ localStorage.setItem("game2048_hall", JSON.stringify(data)); }catch(e){}
+}
+async function loadHall(){
+  hall=[];
+  try{
+    if(hasHost && hasHost.loadGame){
+      const d=await hasHost.loadGame();
+      if(d && Array.isArray(d.hall)) hall=d.hall;
+    }
+  }catch(e){}
+  if(!hall.length){
+    try{ const d=localStorage.getItem("game2048_hall"); if(d){ const o=JSON.parse(d); if(Array.isArray(o.hall)) hall=o.hall; } }catch(e){}
+  }
+  hall.sort((a,b)=>b.score-a.score);
+  renderHall();
+}
+function getTagFor(score){
+  const pool = score>=2048?TAGS_TOP : score>=512?TAGS_MID : TAGS_LOW;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function recordToHall(name,score){
+  const tag=getTagFor(score);
+  hall=hall.filter(h=>h.name!==name);
+  hall.push({name, score, date:Date.now(), tag});
+  hall.sort((a,b)=>b.score-a.score);
+  hall=hall.slice(0,12);
+  saveHall();
+  return tag;
+}
+function renderHall(){
+  const el=$("#hall-list");
+  if(!hall.length){ el.innerHTML='<div class="hall-empty">暂无记录，等你来封王</div>'; return; }
+  const names=["🥇","🥈","🥉"];
+  el.innerHTML=hall.slice(0,5).map((h,i)=>{
+    const r=i<3?`<span class="rank r${i+1}">${names[i]}</span>`:`<span class="rank">${i+1}</span>`;
+    return `<div class="hall-row">${r}<span class="hname">${esc(h.name)}</span>`+
+      (h.tag?`<span class="htag">${esc(h.tag)}</span>`:"")+
+      `<span class="hscore">${h.score}</span></div>`;
+  }).join("");
+}
+/* ================= 座位配置 ================= */
+function makeSeat(kind){
+  return {kind, name:"", charId:null, avatar:null, board:emptyBoard(), idGrid:emptyIdGrid(), score:0, max:2,
+          dead:false, color:SEAT_COLORS[Math.floor(Math.random()*SEAT_COLORS.length)], noise:Math.random()*0.5};
+}
+function renderSeats(){
+  const el=$("#seats");
+  el.innerHTML=seats.map((s,i)=>{
+    let typeTxt, avatarHtml;
+    if(s.kind==="empty"){ typeTxt="空位 · 不参赛"; avatarHtml='<span class="seat-avatar">🕳️</span>'; }
+    else if(s.kind==="human"){ typeTxt="玩家本人 · 你来操作"; avatarHtml='<span class="seat-avatar">🙋</span>'; }
+    else if(s.kind==="char"){ typeTxt="AI 角色 · 自动走子"; avatarHtml=s.avatar
+      ? `<img class="seat-avatar" src="${esc(s.avatar)}" alt="">`
+      : '<span class="seat-avatar">🎭</span>'; }
+    else { typeTxt="机器人 · 自动走子"; avatarHtml='<span class="seat-avatar">🤖</span>'; }
+    return `<div class="seat-card" data-kind="${s.kind}" data-i="${i}">
+      <span class="seat-num">${i+1}</span>
+      ${avatarHtml}
+      <div class="seat-info"><span class="seat-name">${esc(s.name||"空位")}</span>
+      <span class="seat-type">${typeTxt}</span></div>
+      <span class="seat-arrow">›</span></div>`;
+  }).join("");
+}
+function cycleSeat(i){
+  const s=seats[i];
+  if(s.kind==="human"){ openCharPicker(i); return; }      // 我 → AI 角色
+  const hasHuman = seats.some(x=>x.kind==="human");       // 全场最多一个「我」
+  if(s.kind==="char"){ s.kind="bot"; s.name=randomBotName(); s.charId=null; s.avatar=null; }
+  else if(s.kind==="bot"){ s.kind="empty"; s.name=""; s.charId=null; s.avatar=null; }
+  else {
+    if(!hasHuman){ s.kind="human"; s.name=playerName; }
+    else { openCharPicker(i); return; }                    // 已有「我」→ 直接选 AI 角色
+  }
+  renderSeats();
+}
+function randomBotName(){
+  const used=seats.filter(x=>x.kind==="bot").map(x=>x.name);
+  const pool=BOT_NAMES.filter(n=>!used.includes(n));
+  const arr=pool.length?pool:BOT_NAMES;
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+async function openCharPicker(i){
+  pickSeat=i;
+  const list=$("#char-list");
+  if(!characters.length){
+    if(hasHost && hasHost.listAvailableCharacters){
+      try{ characters=await hasHost.listAvailableCharacters()||[]; }catch(e){}
+    }
+  }
+  if(!characters.length){
+    list.innerHTML='<div class="char-empty">这台手机里还没有可上桌的 AI 角色<br>去主界面创建/导入角色卡后再来<br>现在可以先选「机器人」或自己上</div>';
+  }else{
+    list.innerHTML=characters.map(c=>`
+      <div class="char-item" data-id="${esc(c.id)}">
+        ${c.avatar?`<img src="${esc(c.avatar)}" alt="">`:'<span class="no-avatar">🎭</span>'}
+        <div style="min-width:0"><div class="cname">${esc(c.name)}</div>
+        ${c.subtitle?`<div class="csub">${esc(c.subtitle)}</div>`:""}</div>
+      </div>`).join("");
+    $$("#char-list .char-item").forEach(el=>{
+      el.onclick=()=>{ const c=characters.find(x=>x.id===el.dataset.id); if(c) pickChar(pickSeat,c); };
+    });
+  }
+  $("#char-mask").classList.add("active");
+}
+function pickChar(i,c){
+  const s=seats[i];
+  s.kind="char"; s.name=c.name; s.charId=c.id; s.avatar=c.avatar||null;
+  $("#char-mask").classList.remove("active");
+  renderSeats();
+}
+    arena.appendChild(mainCol); arena.appendChild(miniCol);
+  }else{
+    arena.classList.add("grid");
+    arena.innerHTML=seats.map((s,i)=>`<div class="board-card mini" data-i="${i}">
+      <div class="b-head">${seatIconHtml(s)}<span class="b-name">${esc(s.name)}</span>
+        <span class="b-score"><small>分</small>${s.score}</span></div>
+      <div class="board mini" data-b="${i}"></div>
+      ${s.dead?'<div class="b-dead">出局</div>':""}</div>`).join("");
+  }
+  seats.forEach((s,i)=>{ renderBoardFull(s, i); });
+  renderScoreStrip();
+}
+function refreshBoard(i){
+  renderBoardFull(seats[i], i);
+  const arena=$("#arena");
+  const card=arena.querySelector(`.board-card[data-i="${i}"] .b-score`);
+  if(card) card.innerHTML=`<small>分</small>${seats[i].score}`;
+  renderScoreStrip();
+  /* 更新出局遮罩 */
+  const c=arena.querySelector(`.board-card[data-i="${i}"]`);
+  if(c && seats[i].dead && !c.querySelector(".b-dead")){
+    const d=document.createElement("div"); d.className="b-dead"; d.textContent="出局";
+    c.appendChild(d);
+  }
+}
+function renderAll(){
+  renderArena();
+}
+window.addEventListener("resize",()=>{ if($("#screen-game").classList.contains("active")) renderAll(); });
+/* ================= 聊天消息 ================= */
+function speak(html, cls){
+  const chat=$("#chat");
+  const d=document.createElement("div");
+  d.className="msg"+(cls?" "+cls:"");
+  d.innerHTML=html;
+  chat.appendChild(d);
+  chat.scrollTop=chat.scrollHeight;
+  while(chat.children.length>60) chat.removeChild(chat.firstChild);
+}
+function addEvent(txt){ speak(`<span class="emo">⚡</span> <span class="event">${txt}</span>`,"event"); }
+function sayName(s){ return `<b>${esc(s.name)}</b>`; }
+
+/* ================= 开局 ================= */
+function startGame(){
+  seats = seats.filter(s=>s.kind!=="empty");
+  if(!seats.length) seats=[makeSeat("bot")];
+  /* 把「我」固定到最左边（第一个座位） */
+  const hi=seats.findIndex(s=>s.kind==="human");
+  if(hi>0){ const [h]=seats.splice(hi,1); seats.unshift(h); }
+  gameOver=false; winner=null; gamePaused=false;
+  $("#pause-overlay").style.display="none";
+  $("#btn-pause").textContent="⏸";
+  for(const t in aiTimers){ clearTimeout(aiTimers[t]); }
+  aiTimers={};
+  if(gameClock){ clearInterval(gameClock); gameClock=null; }
+  seats.forEach(s=>{
+    s.board=emptyBoard(); s.idGrid=emptyIdGrid();
+    addRandom(s.board, s.idGrid); addRandom(s.board, s.idGrid);
+    s.score=0; s.max=2; s.dead=false;
+  });
+  timeLeft=timeTotal;
+  $("#mode-label").textContent = mode==="race" ? "竞速赛 · 先合出 2048" : "限时赛 · 3 分钟";
+  showScreen("#screen-game");
+  renderAll();
+  $("#chat").innerHTML="";
+  speak(`<span class="emo">🎬</span> <span class="event">对战开始！${seats.map(s=>sayName(s)).join("  vs  ")}</span>`,"event");
+  if(mode==="race"){ speak("🎯 谁先合出 <b>2048</b> 谁是王者；没人合出就比总分！"); }
+  else { speak("⏱️ 3 分钟限时赛，时间到分数最高者胜！"); }
+  speak("🧩 所有人同时进行，棋盘堵死即出局定格，全打完才出最终结果");
+  if(talkMode) fireOpenTaunts();
+  if(mode==="time") startGameClock();
+  seats.forEach(s=>{ if(s.kind!=="human") scheduleAi(s); });
+}
+/* ================= AI 引擎（并发） ================= */
+function scheduleAi(seat){
+  if(gameOver || seat.dead || seat.kind==="human") return;
+  const i=seats.indexOf(seat);
+  if(i<0) return;
+  aiTimers[i]=setTimeout(()=>{
+    aiStep(seat);
+  }, aiInterval + Math.random()*500);
+}
+function aiStep(seat){
+  if(gameOver || seat.dead) return;
+  if(gamePaused){ scheduleAi(seat); return; }
+  const d=aiChoose(seat.board, seat.noise);
+  if(d<0){
+    seat.dead=true;
+    addEvent(`${seat.name} 棋盘堵死，出局！`);
+    renderAll();
+    checkEnd();
+    return;
+  }
+  applyMove(seat, d, false);
+  if(!gameOver && !seat.dead) scheduleAi(seat);
+}
+
+/* ================= 走子 ================= */
+function applyMove(seat, dir, isHuman){
+  if(gameOver || seat.dead) return;
+  const res=moveBoardTraced(seat.board, seat.idGrid, dir);
+  if(!res.moved){
+    if(!isHuman){
+      const d2=aiChoose(seat.board, seat.noise+0.3);
+      if(d2>=0){ applyMove(seat,d2,false); return; }
+      seat.dead=true;
+      addEvent(`${seat.name} 棋盘堵死，出局！`);
+      renderAll();
+      checkEnd();
+    }
+    return;
+  }
+  seat.board=res.board; seat.idGrid=res.idGrid; seat.score+=res.gain; seat.max=Math.max(seat.max,maxTile(seat.board));
+  const added=addRandom(seat.board, seat.idGrid);
+  if(!added) seat.dead=true;
+  const i=seats.indexOf(seat);
+  renderBoardAnim(seat, res.moves, added, i);
+  if(seat.dead){
+    addEvent(`${seat.name} 无路可走，出局！`);
+  }
+  if(mode==="race" && seat.max>=2048 && !seat.dead){
+    endGame(seat);
+    return;
+  }
+  if(seat.kind==="char" && talkMode && Math.random()<0.12 && !seat.dead) fireTinyTaunt(seat);
+  checkEnd();
+}
+function checkEnd(){
+  if(gameOver) return;
+  if(seats.every(s=>s.dead)){ endGame(null); return; }
+  if(mode==="time" && timeLeft<=0){ endGame(null); return; }
+}
+/* ================= 玩家输入 ================= */
+function humanDir(dir){
+  if(gameOver || gamePaused) return;
+  const me=seats.find(s=>s.kind==="human");
+  if(!me || me.dead) return;
+  applyMove(me, dir, true);
+}
+function bindInput(){
+  document.addEventListener("keydown",e=>{
+    if(!$("#screen-game").classList.contains("active")) return;
+    const d=DIR_ARROW[e.key];
+    if(d!==undefined){ e.preventDefault(); humanDir(d); }
+  });
+  const arena=$("#arena");
+  let tx=0,ty=0,sx=0,sy=0,swipeOn=false;
+  arena.addEventListener("touchstart",e=>{
+    const t=e.touches[0]; sx=t.clientX; sy=t.clientY; tx=0; ty=0;
+    swipeOn = !!(e.target.closest && e.target.closest(".main-col"));
+  },{passive:true});
+  arena.addEventListener("touchmove",e=>{
+    const t=e.touches[0]; tx=t.clientX-sx; ty=t.clientY-sy;
+  },{passive:true});
+  arena.addEventListener("touchend",e=>{
+    if(!swipeOn) return;
+    const ax=Math.abs(tx), ay=Math.abs(ty);
+    if(Math.max(ax,ay)<24) return;
+    humanDir(ax>ay ? (tx>0?1:3) : (ty>0?2:0));
+  },{passive:true});
+}
+
+/* ================= 评论（快捷 + 自输，AI 可见） ================= */
+const QUICK_MSGS=["666！","这也太菜了","快合 2048！","运气不错啊","这波操作秀","笑死我了","加油！","就这？"];
+let cmtResponding=false;
+function sendComment(text){
+  const t=String(text||"").trim();
+  if(!t || gameOver) return;
+  speak(`💬 <b>${esc(playerName)}</b>：${esc(t)}`);
+  const input=$("#cmt-input");
+  if(input){ input.value=""; input.blur(); }
+  maybeAIRespond(t);
+}
+async function maybeAIRespond(comment){
+  if(!talkMode || cmtResponding || gameOver) return;
+  const chars=seats.filter(s=>s.kind==="char" && !s.dead);
+  if(!chars.length) return;
+  if(Math.random()>0.65) return;
+  const s=chars[Math.floor(Math.random()*chars.length)];
+  cmtResponding=true;
+  try{
+    const r=await charSay(s,"你是《2048争霸》对局中的选手，玩家刚在公共聊天里发了一条评论，你回一句简短的回应，要符合你的性格，15字以内，不要引号。","玩家评论："+comment,"哈哈哈哈看到了");
+    if(r && !gameOver) speak(`${sayName(s)}：${esc(r)}`);
+  }catch(e){}
+  cmtResponding=false;
+}
+function bindComment(){
+  const quick=$("#quick");
+  if(!quick) return;
+  quick.innerHTML=QUICK_MSGS.map(t=>`<span class="q-chip">${esc(t)}</span>`).join("");
+  quick.querySelectorAll(".q-chip").forEach(ch=>{
+    ch.addEventListener("click",()=>sendComment(ch.textContent));
+  });
+  $("#cmt-send").addEventListener("click",()=>sendComment($("#cmt-input").value));
+  $("#cmt-input").addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ e.preventDefault(); sendComment(e.target.value); }
+  });
+}
+
+/* ================= 暂停 / 确认弹窗 ================= */
+function showConfirm(title,msg,okText,okClass,onOk){
+  $("#confirm-title").textContent=title;
+  $("#confirm-msg").textContent=msg;
+  const ok=$("#confirm-ok");
+  ok.textContent=okText||"确定";
+  ok.className="btn primary"+(okClass?" "+okClass:"");
+  confirmCb=onOk;
+  $("#confirm-mask").classList.add("active");
+}
+function hideConfirm(){ $("#confirm-mask").classList.remove("active"); confirmCb=null; }
+function pauseGame(){
+  if(gameOver) return;
+  gamePaused=true;
+  for(const t in aiTimers){ clearTimeout(aiTimers[t]); }
+  aiTimers={};
+  if(gameClock){ clearInterval(gameClock); gameClock=null; }
+  $("#pause-overlay").style.display="flex";
+  $("#btn-pause").textContent="▶";
+}
+function resumeGame(){
+  gamePaused=false;
+  $("#pause-overlay").style.display="none";
+  $("#btn-pause").textContent="⏸";
+  if(mode==="time") startGameClock();
+  seats.forEach(s=>{ if(s.kind!=="human" && !s.dead && !gameOver) scheduleAi(s); });
+}
+/* ================= 限时赛时钟 ================= */
+function startGameClock(){
+  if(gameClock) clearInterval(gameClock);
+  updateTimeLeft();
+  gameClock=setInterval(()=>{
+    timeLeft--;
+    updateTimeLeft();
+    if(timeLeft<=0){ clearInterval(gameClock); gameClock=null; endGame(null); }
+  },1000);
+}
+function updateTimeLeft(){
+  const el=$("#time-left");
+  if(mode!=="time"){ el.textContent=""; return; }
+  const mm=String(Math.floor(Math.max(0,timeLeft)/60)).padStart(2,"0");
+  const ss=String(Math.max(0,timeLeft)%60).padStart(2,"0");
+  el.textContent=`⏱ ${mm}:${ss}`;
+}
+/* ================= LLM 角色表演 ================= */
+const OPEN_TAUNTS=["这把我赢定了，你们先想好怎么夸我","2048 而已，闭着眼睛都能合出来","我劝你们直接认输，省得浪费时间","棋盘就是我的主场，颤抖吧","一会儿输太快可别哭"];
+const TINY_TAUNTS=["哎哟，运气不错","这波不亏","手滑了，故意的","看我秀一手","小意思","运气也是实力的一部分"];
+const WIN_SPEECH=["看到了吗？这就是实力的差距。","赢了，但也就一般般吧，没发挥全力。","感谢各位的陪跑，下次继续。","这奖杯我先保管了。"];
+const LOSE_TAUNT=["我那是让着你！再来一局！","运气好罢了，再来一次我赢你十条街。","哼，棋盘不好用。","这次没热身，下次走着瞧。"];
+
+async function getCharPkg(s){
+  if(!hasHost || !hasHost.getRoleLightPackage || !s.charId) return null;
+  if(charPkgs[s.charId]) return charPkgs[s.charId];
+  try{ const p=await hasHost.getRoleLightPackage(s.charId); if(p) charPkgs[s.charId]=p; return p||null; }catch(e){ return null; }
+}
+async function charSay(s, system, user, fallback){
+  try{
+    const pkg=await getCharPkg(s);
+    if(hasHost && hasHost.callLLM && pkg){
+      const r=await hasHost.callLLM({characterId:s.charId, messages:[...(pkg.messages||[]), {role:"system",content:system},{role:"user",content:user}]});
+      const t=(r&&r.content||"").trim().replace(/^["“”']+|["“”']+$/g,"");
+      if(t) return t;
+    }else if(hasHost && hasHost.callGlobalLLM){
+      const r=await hasHost.callGlobalLLM({messages:[{role:"system",content:system},{role:"user",content:user}]});
+      const t=(r&&r.content||"").trim().replace(/^["“”']+|["“”']+$/g,"");
+      if(t) return t;
+    }
+  }catch(e){}
+  return fallback[Math.floor(Math.random()*fallback.length)];
+}
+function fireOpenTaunts(){
+  const chars=seats.filter(s=>s.kind==="char");
+  chars.forEach(s=>{
+    charSay(s,"你在玩《2048争霸》多人同时比拼，用一句话说出你的开战宣言。要符合你的性格，20字以内，不要引号，不要说与游戏无关的话。","比赛马上开始。",OPEN_TAUNTS).then(t=>{
+      if(!gameOver) speak(`🗣️ ${sayName(s)}：${esc(t)}`);
+    }).catch(()=>{});
+  });
+}
+function fireTinyTaunt(s){
+  speak(`${sayName(s)}：${esc(TINY_TAUNTS[Math.floor(Math.random()*TINY_TAUNTS.length)])}`);
+}
+async function fireWinSpeech(w){
+  let text=null;
+  if(w.kind==="char"){
+    text=await charSay(w,"你在《2048争霸》里刚刚夺冠，说出夺冠感言。一句话，符合你的性格，25字以内，不要引号。","你赢了！得分 "+w.score+(mode==="race"?"，率先合出 "+w.max:"")+"。",WIN_SPEECH);
+  }else{
+    try{
+      if(hasHost && hasHost.callGlobalLLM){
+        const r=await hasHost.callGlobalLLM({messages:[{role:"system",content:"你是2048争霸赛的主持人，用一句中二热血的话宣布冠军。25字以内，不要引号。"},{role:"user",content:"冠军是 "+w.name+"，得分 "+w.score}]});
+        if(r&&r.content){ const t=r.content.trim(); if(t) text=t; }
+      }
+    }catch(e){}
+  }
+  $("#r-speech").textContent = text || WIN_SPEECH[Math.floor(Math.random()*WIN_SPEECH.length)];
+}
+async function fireLoseTaunts(w){
+  const losers=seats.filter(s=>s!==w && s.kind==="char").slice(0,2);
+  const el=$("#r-loses");
+  el.innerHTML="";
+  for(const s of losers){
+    const t=await charSay(s,"你在《2048争霸》里输给了 "+w.name+"，说一句不服气但符合你性格的狠话。20字以内，不要引号。","你输了，他得分 "+w.score+"。",LOSE_TAUNT);
+    const div=document.createElement("div");
+    div.className="lose-line";
+    div.innerHTML=`😤 <b>${esc(s.name)}</b>：${esc(t)}`;
+    el.appendChild(div);
+  }
+}
+async function recordMemory(w){
+  if(!hasHost || !hasHost.recordGameEvent) return;
+  const charSeats=seats.filter(s=>s.kind==="char" && s.charId);
+  if(!charSeats.length) return;
+  const ids=charSeats.map(s=>s.charId);
+  const names=seats.map(s=>s.name).join("、");
+  const losers=seats.filter(s=>s!==w).map(s=>s.name).join("、")||"无人";
+  const summary=`${names}一起玩了《2048争霸》${mode==="race"?"竞速赛":"限时赛"}，${w.name}以${w.score}分夺冠${mode==="race"?"（率先合出"+w.max+"）":""}，${losers}落败并表示不服，想再战一局。`;
+  try{ await hasHost.recordGameEvent({characterIds:ids, summary}); }catch(e){}
+}
+/* ================= 结算 ================= */
+function endGame(winnerSeat){
+  if(gameOver) return;
+  gameOver=true;
+  for(const t in aiTimers){ clearTimeout(aiTimers[t]); }
+  aiTimers={};
+  if(gameClock){ clearInterval(gameClock); gameClock=null; }
+  gamePaused=false;
+  $("#pause-overlay").style.display="none";
+  $("#btn-pause").textContent="⏸";
+  hideConfirm();
+  const ranked=[...seats].sort((a,b)=>b.score-a.score);
+  let w=winnerSeat || ranked[0] || seats[0];
+  const champs = ranked.filter(s=>s.score===w.score && !(winnerSeat && s!==winnerSeat));
+  const isTie = !winnerSeat && champs.length>1;
+  /* 名人堂：每位选手的最高分都记录在册 */
+  seats.forEach(s=>recordToHall(s.name, s.score));
+  renderHall();
+  const tag=getTagFor(w.score);
+  $("#r-name").textContent = isTie ? champs.map(s=>s.name).join(" & ") : w.name;
+  $("#r-tag").textContent = isTie ? "并列冠军" : tag;
+  $("#r-score").textContent = `最终得分 ${w.score}${mode==="race"&&!isTie?" · 合出 "+w.max:""}`;
+  /* 完整排名 */
+  const medal=["🥇","🥈","🥉","4️⃣"];
+  $("#r-ranks").innerHTML=ranked.map((s,i)=>{
+    const champ = !isTie ? s===w : s.score===w.score;
+    return `<div class="rank-line${champ?" champ":""}">
+      <span class="rk">${medal[i]||(i+1)}</span>
+      <span class="rn">${esc(s.name)}</span>
+      <span class="rm">×${s.max}${s.dead?" · 出局":""}</span>
+      <span class="rc">${s.score}</span></div>`;
+  }).join("");
+  $("#r-speech").textContent = isTie ? "势均力敌，双王并立！" : "正在准备获奖感言…";
+  $("#r-loses").innerHTML="";
+  showScreen("#screen-result");
+  startFireworks();
+  if(talkMode){
+    if(isTie){ $("#r-speech").textContent="势均力敌，双王并立！"; }
+    else {
+      fireWinSpeech(w);
+      fireLoseTaunts(w);
+    }
+  }
+  recordMemory(isTie?champs[0]:w);
+}
+
+/* ================= 烟花 ================= */
+function startFireworks(){
+  const cv=$("#fx"), ctx=cv.getContext("2d");
+  const resize=()=>{ cv.width=window.innerWidth; cv.height=window.innerHeight; };
+  resize(); window.addEventListener("resize",resize);
+  const parts=[];
+  const colors=["#fbbf24","#22d3ee","#a78bfa","#34d399","#f87171","#f9fafb"];
+  function boom(x,y){
+    const color=colors[Math.floor(Math.random()*colors.length)];
+    for(let i=0;i<70;i++){
+      const a=Math.random()*Math.PI*2, sp=Math.random()*6+2;
+      parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,g:0.055,life:1,decay:Math.random()*0.02+0.01,color});
+    }
+  }
+  const start=Date.now();
+  (function frame(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    const elapsed=Date.now()-start;
+    if(elapsed<12000 && Math.random()<0.09) boom(Math.random()*cv.width, Math.random()*cv.height*0.65);
+    for(let i=parts.length-1;i>=0;i--){
+      const p=parts[i];
+      p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.life-=p.decay;
+      if(p.life<=0){ parts.splice(i,1); continue; }
+      ctx.globalAlpha=Math.max(0,p.life);
+      ctx.fillStyle=p.color;
+      ctx.fillRect(p.x,p.y,2.6,2.6);
+    }
+    ctx.globalAlpha=1;
+    if(parts.length || elapsed<12000) requestAnimationFrame(frame);
+  })();
+}
+/* ================= 屏幕切换 / 初始化 ================= */
+function showScreen(sel){
+  $$(".screen").forEach(s=>s.classList.remove("active"));
+  const el=$(sel); el.classList.add("active");
+  if(sel==="#screen-game") setTimeout(renderAll,40);
+}
+function resetSeats(){
+  seats=[];
+  seats.push(Object.assign(makeSeat("human"),{name:playerName}));
+  seats.push(Object.assign(makeSeat("bot"),{name:randomBotName()}));
+  seats.push(Object.assign(makeSeat("bot"),{name:randomBotName()}));
+  seats.push(Object.assign(makeSeat("bot"),{name:randomBotName()}));
+}
+function bindButtons(){
+  $("#btn-start").addEventListener("click",()=>{ resetSeats(); renderSeats(); showScreen("#screen-setup"); });
+  $("#btn-back-menu").addEventListener("click",()=>showScreen("#screen-menu"));
+  $("#btn-go").addEventListener("click",()=>startGame());
+  $("#btn-again").addEventListener("click",()=>startGame());
+  $("#btn-home").addEventListener("click",()=>showScreen("#screen-menu"));
+  $("#btn-pause").addEventListener("click",()=>{
+    if(gameOver) return;
+    if(gamePaused){ resumeGame(); }
+    else showConfirm("暂停比赛","确定要暂停比赛吗？AI 走子和倒计时都会停下。","暂停","",pauseGame);
+  });
+  $("#btn-end").addEventListener("click",()=>{
+    if(gameOver) return;
+    showConfirm("结束比赛","确定要结束比赛吗？将按当前分数结算排名、加冕冠军。","确定结束","solid-danger",()=>endGame(null));
+  });
+  $("#confirm-cancel").addEventListener("click",hideConfirm);
+  $("#confirm-ok").addEventListener("click",()=>{ const cb=confirmCb; hideConfirm(); if(cb) cb(); });
+  $("#pause-overlay").addEventListener("click",resumeGame);
+  $("#char-cancel").addEventListener("click",()=>$("#char-mask").classList.remove("active"));
+  $$("#mode-seg .seg-btn").forEach(b=>{
+    b.addEventListener("click",()=>{
+      $$("#mode-seg .seg-btn").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active"); mode=b.dataset.mode;
+    });
+  });
+  $$("#speed-seg .seg-btn").forEach(b=>{
+    b.addEventListener("click",()=>{
+      $$("#speed-seg .seg-btn").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active"); aiInterval=parseInt(b.dataset.speed,10);
+    });
+  });
+  $$("#talk-seg .seg-btn").forEach(b=>{
+    b.addEventListener("click",()=>{
+      $$("#talk-seg .seg-btn").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active"); talkMode=b.dataset.talk==="1";
+    });
+  });
+  $("#seats").addEventListener("click",e=>{
+    const card=e.target.closest(".seat-card");
+    if(card) cycleSeat(parseInt(card.dataset.i,10));
+  });
+}
+(function init(){
+  resetSeats();
+  renderSeats();
+  bindButtons();
+  bindInput();
+  bindComment();
+  loadHall();
+  try{
+    if(hasHost && hasHost.setTitleBar){
+      hasHost.setTitleBar({
+        material:"glass", background:"rgba(11,14,26,.55)", color:"#e9edf9",
+        borderColor:"rgba(255,255,255,.1)",
+        buttonBackground:"rgba(255,255,255,.08)", buttonColor:"#e9edf9",
+        buttonBorderColor:"rgba(255,255,255,.14)", buttonRadius:"999px",
+        buttonShadow:"0 4px 12px rgba(0,0,0,.3)", iconOpacity:.9
+      });
+    }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
