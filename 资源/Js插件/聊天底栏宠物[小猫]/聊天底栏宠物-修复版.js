@@ -160,6 +160,16 @@ export default {
 
     function frame() {
       const t = performance.now();
+
+      // 思维链底部弹窗（小手机 .chat-reasoning-sheet，点「思考过程」触发条打开）展开时，
+      // 小猫先让位隐藏——它 z-index 极高，否则会浮在「思考过程」弹窗上面挡住文字。
+      // 弹窗关闭后下一帧自动恢复显示（与下方 .chat-input-bar 判定互不冲突）。
+      if (document.querySelector(".chat-reasoning-sheet")) {
+        wrap.style.display = "none";
+        rafId = requestAnimationFrame(frame);
+        return;
+      }
+
       const bar = getAnchor();
       if (bar) {
         lastBarRect = bar.getBoundingClientRect();
